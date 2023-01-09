@@ -30,8 +30,22 @@ func main() {
 		JSONEncoder: json.Marshal,
 		JSONDecoder: json.Unmarshal,
 	})
-
 	middleware.Setting(app)
+	db, err := ConnectDB()
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	app.Get("/", func(c *fiber.Ctx) error {
+		getData(db)
+		return c.Status(200).JSON("*result")
+	})
+
+	app.Listen(":5000")
+}
+
+func ConnectDB() (*sql.DB, error) {
 	var (
 		host     = os.Getenv("HOST")
 		user     = os.Getenv("USER")
@@ -39,44 +53,15 @@ func main() {
 		dbname   = os.Getenv("DBNAME")
 	)
 	dbinfo := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=5432 sslmode=disable", host, user, password, dbname)
-	// db, err := gorm.Open(postgres.Open(dbinfo), &gorm.Config{})
-	// if err != nil {
-	// 	panic(err)
-	// }
 	db, err := sql.Open("postgres", dbinfo)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	defer db.Close()
-
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-
-	app.Get("/", func(c *fiber.Ctx) error {
-
-		// * 테이블 생성
-		// db.Migrator().CreateTable(&User{})
-
-		// * 데이터 생성
-		// user := User{Name: "CWIN77"}
-		// result := db.Create(&user)
-		// if result.Error != nil {
-		// 	panic(result.Error)
-		// }
-		// db.Select("Name", "ID", "CreatedAt","UpdatedAt","DeletedAt").Create(&user)
-
-		// * 데이터 가져오기
-		// var result User
-		// db.Model(User{}).First(&result)
-		// fmt.Println(result)
-
-		getData(db)
-		return c.Status(200).JSON("*result")
-	})
-
-	app.Listen(":5000")
+	return db, err
 }
 
 func createTable(db *sql.DB) {
@@ -106,7 +91,7 @@ func dropTable(db *sql.DB) {
 }
 
 func getData(db *sql.DB) {
-	rows, err := db.Query(`SELECT tablename FROM pg_catalog.pg_tables`)
+	rows, err := db.Query(`SELECT * FROM users`)
 	if err != nil {
 		panic(err)
 	}
