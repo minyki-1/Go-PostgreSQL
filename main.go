@@ -8,11 +8,20 @@ import (
 	"os"
 	"time"
 
-	middleware "psql/Tools/middleware"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
+
+	_component "psql/Tools/Router/component"
+	_component_like "psql/Tools/Router/component/like"
+	_project "psql/Tools/Router/project"
+	_project_component "psql/Tools/Router/project/component"
+	_style "psql/Tools/Router/style"
+	_team "psql/Tools/Router/team"
+	_team_member "psql/Tools/Router/team/member"
+	_test "psql/Tools/Router/test"
+	_user "psql/Tools/Router/user"
+	middleware "psql/Tools/middleware"
+	"psql/Tools/mongodb"
 )
 
 type User struct {
@@ -26,22 +35,48 @@ func main() {
 	if err := godotenv.Load(".env"); err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
 	app := fiber.New(fiber.Config{
 		JSONEncoder: json.Marshal,
 		JSONDecoder: json.Unmarshal,
 	})
+
 	middleware.Setting(app)
-	db, err := ConnectDB()
-	if err != nil {
-		panic(err)
+
+	if err := mongodb.ConnectDB(os.Getenv("MONGODB_URI")); err != nil {
+		log.Fatal("Error mongoDB connect")
 	}
-	defer db.Close()
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		getData(db)
-		return c.Status(200).JSON("*result")
-	})
+	app.Get("/component", _component.Get)
+	app.Post("/component", _component.Post)
+	app.Put("/component", _component.Put)
+	app.Delete("/component", _component.Delete)
+	app.Put("/component/like", _component_like.Put)
 
+	app.Post("/project", _project.Post)
+	app.Put("/project", _project.Put)
+	app.Delete("/project", _project.Delete)
+	app.Get("/project/:params", _project.Get)
+	app.Put("/project/component", _project_component.Put)
+	app.Delete("/project/component", _project_component.Delete)
+
+	app.Get("/team/:params", _team.Get)
+	app.Post("/team", _team.Post)
+	app.Delete("/team", _team.Delete)
+	app.Put("/team", _team.Put)
+	app.Put("/team/member", _team_member.Put)
+
+	app.Get("/user/:params", _user.Get)
+	app.Post("/user", _user.Post)
+
+	app.Get("/style/:params", _style.Get)
+
+	if os.Getenv("ENV_MODE") == "development" {
+		app.Get("/test", _test.Test)
+	}
+
+	// Elastic Beanstalk Deploy Port : 5000
+	// Elastic Beanstalk Main Name : application
 	app.Listen(":5000")
 }
 
