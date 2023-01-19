@@ -75,8 +75,6 @@ func main() {
 		app.Get("/test", _test.Test)
 	}
 
-	// Elastic Beanstalk Deploy Port : 5000
-	// Elastic Beanstalk Main Name : application
 	app.Listen(":5000")
 }
 
